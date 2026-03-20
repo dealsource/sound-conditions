@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sound Conditions — Mississippi Sound Marine Forecast</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --navy: #0B1D33;
+  --navy-mid: #122847;
+  --navy-light: #1A3A5C;
+  --teal: #0D9488;
+  --teal-light: #2DD4BF;
+  --teal-glow: rgba(13,148,136,0.35);
+  --cream: #FAF7F2;
+  --cream-dim: #E8E4DE;
+  --sand: #D4C9B8;
+  --green: #22C55E;
+  --green-bg: rgba(34,197,94,0.12);
+  --yellow: #FACC15;
+  --yellow-bg: rgba(250,204,21,0.12);
+  --red: #EF4444;
+  --red-bg: rgba(239,68,68,0.12);
+  --glass: rgba(255,255,255,0.06);
+  --glass-border: rgba(255,255,255,0.1);
+  --serif: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+  --sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--sans);
+  background: var(--navy);
+  color: var(--cream);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Loading & Fade-in ─── */
+.app { opacity: 0; transition: opacity 0.6s ease; }
+.app.loaded { opacity: 1; }
+
+/* ─── Header ─── */
+header {
+  padding: 1.25rem 1.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  fill: var(--teal-light);
+}
+.logo h1 {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  color: var(--cream);
+}
+.logo h1 span { color: var(--teal-light); }
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--sand);
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--teal-light);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+.status-dot.fetching { background: var(--yellow); animation: pulse-dot 0.6s ease-in-out infinite; }
+.status-dot.error { background: var(--red); animation: none; }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.location-label {
+  font-size: 0.8rem;
+  color: var(--sand);
+  text-align: center;
+  padding: 0 1.5rem 0.5rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ─── Wave Background ─── */
+.wave-bg {
+  position: relative;
+  overflow: hidden;
+}
+.wave-bg::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-mid) 50%, var(--navy) 100%);
+  z-index: 0;
+}
+.wave-svg-wrap {
+  position: absolute;
+  bottom: -2px;
+  left: 0; right: 0;
+  height: 80px;
+  overflow: hidden;
+  z-index: 1;
+}
+.wave-svg-wrap svg {
+  position: absolute;
+  bottom: 0;
+  width: 200%;
+  height: 100%;
+}
+.wave-svg-wrap .wave1 { animation: wave-drift 8s linear infinite; opacity: 0.15; }
+.wave-svg-wrap .wave2 { animation: wave-drift 12s linear infinite reverse; opacity: 0.1; bottom: 8px; }
+@keyframes wave-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ─── Current Conditions ─── */
+.current-section {
+  position: relative;
+  padding: 1.5rem 1.5rem 5rem;
+  max-width: 960px;
+  margin: 0 auto;
+  z-index: 2;
+}
+.safety-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.02em;
+}
+.safety-banner.green  { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+.safety-banner.yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid rgba(250,204,21,0.25); }
+.safety-banner.red    { background: var(--red-bg); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+.safety-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+}
+.safety-banner.green  .safety-dot { background: var(--green); }
+.safety-banner.yellow .safety-dot { background: var(--yellow); }
+.safety-banner.red    .safety-dot { background: var(--red); }
+
+.conditions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+}
+.metric-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.18);
+}
+.metric-card.primary {
+  grid-column: 1 / -1;
+  padding: 1.75rem 1rem;
+}
+.metric-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--sand);
+  margin-bottom: 0.5rem;
+}
+.metric-value {
+  font-family: var(--serif);
+  font-size: 2.6rem;
+  line-height: 1;
+  color: var(--cream);
+}
+.metric-card.primary .metric-value {
+  font-size: 4.5rem;
+  color: var(--teal-light);
+}
+.metric-unit {
+  font-family: var(--sans);
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--sand);
+  margin-left: 0.15em;
+}
+.metric-card.primary .metric-unit {
+  font-size: 1.35rem;
+}
+
+/* Wind direction arrow */
+.wind-arrow-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.wind-arrow {
+  width: 28px;
+  height: 28px;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wind-arrow svg {
+  width: 100%;
+  height: 100%;
+  fill: var(--teal-light);
+}
+.wind-dir-label {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--cream);
+}
+
+/* Unavailable state */
+.metric-unavailable {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--sand);
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+/* ─── Afternoon Forecast ─── */
+.afternoon-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.5rem 1.5rem;
+}
+.section-title {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  margin-bottom: 1rem;
+  color: var(--cream);
+}
+.section-title .subtle { color: var(--sand); font-family: var(--sans); font-size: 0.8rem; font-weight: 400; margin-left: 0.5rem; }
+.afternoon-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.afternoon-metric { text-align: center; }
+.afternoon-metric .metric-label { margin-bottom: 0.35rem; }
+.afternoon-metric .metric-value { font-size: 1.6rem; }
+.afternoon-metric .metric-unit { font-size: 0.8rem; }
+
+/* ─── 7-Day Forecast ─── */
+.forecast-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+.forecast-scroll {
+  display: flex;
+  gap: 0.85rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.forecast-scroll::-webkit-scrollbar { height: 4px; }
+.forecast-scroll::-webkit-scrollbar-track { background: transparent; }
+.forecast-scroll::-webkit-scrollbar-thumb { background: var(--navy-light); border-radius: 4px; }
+
+.forecast-card {
+  flex: 0 0 155px;
+  scroll-snap-align: start;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.1rem 0.9rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  cursor: default;
+}
+.forecast-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.2);
+}
+.fc-day {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  margin-bottom: 0.15rem;
+}
+.fc-date {
+  font-size: 0.7rem;
+  color: var(--sand);
+  margin-bottom: 0.85rem;
+}
+.fc-safety {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 0.25rem;
+  vertical-align: middle;
+}
+.fc-safety.green  { background: var(--green); }
+.fc-safety.yellow { background: var(--yellow); }
+.fc-safety.red    { background: var(--red); }
+.fc-metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.45rem;
+}
+.fc-metric-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sand);
+}
+.fc-metric-value {
+  font-family: var(--serif);
+  font-size: 1rem;
+}
+.fc-desc {
+  font-size: 0.72rem;
+  color: var(--sand);
+  line-height: 1.45;
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 0.65rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Error Banner ─── */
+.error-banner {
+  max-width: 960px;
+  margin: 1rem auto;
+  padding: 1rem 1.5rem;
+  background: var(--red-bg);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 12px;
+  color: var(--red);
+  font-size: 0.85rem;
+  display: none;
+}
+.error-banner.visible { display: block; }
+
+/* ─── Skeleton Loaders ─── */
+.skeleton {
+  background: linear-gradient(90deg, var(--glass) 25%, rgba(255,255,255,0.1) 50%, var(--glass) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 8px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-value {
+  height: 2.6rem;
+  width: 80px;
+  margin: 0 auto;
+}
+.skeleton-value.large {
+  height: 4.5rem;
+  width: 140px;
+}
+
+/* ─── Footer ─── */
+footer {
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.7rem;
+  color: rgba(212,201,184,0.5);
+  max-width: 960px;
+  margin: 0 auto;
+}
+footer a { color: var(--teal); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .conditions-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .metric-card.primary {
+    grid-column: 1 / -1;
+  }
+  .metric-card.primary .metric-value { font-size: 3.5rem; }
+  .metric-value { font-size: 2rem; }
+  .forecast-card { flex: 0 0 140px; }
+  header { padding: 1rem 1rem 0.5rem; }
+  .current-section, .afternoon-section, .forecast-section { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (min-width: 768px) {
+  .conditions-grid {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+  .metric-card.primary {
+    grid-column: 1 / 2;
+    grid-row: 1 / 1;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 20c3-4 6-4 9 0s6 4 9 0 6-4 9 0" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" style="color:var(--teal-light)"/>
+        <path d="M2 14c3-4 6-4 9 0s6 4 9 0 6-4 9 0" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" style="color:var(--teal-light); opacity:0.5"/>
+      </svg>
+      <h1>Sound <span>Conditions</span></h1>
+    </div>
+    <div class="status-bar">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Loading…</span>
+    </div>
+  </header>
+
+  <div class="location-label">Mississippi Sound · Gulfport, MS</div>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Current Conditions -->
+  <div class="wave-bg">
+    <section class="current-section" id="currentSection">
+      <div class="safety-banner green" id="safetyBanner">
+        <div class="safety-dot"></div>
+        <span id="safetyText">Checking conditions…</span>
+      </div>
+
+      <div class="conditions-grid" id="conditionsGrid">
+        <div class="metric-card primary" id="waveCard">
+          <div class="metric-label">Wave Height</div>
+          <div class="metric-value" id="waveValue"><div class="skeleton skeleton-value large"></div></div>
+        </div>
+        <div class="metric-card" id="windSpeedCard">
+          <div class="metric-label">Wind Speed</div>
+          <div class="metric-value" id="windSpeedValue"><div class="skeleton skeleton-value"></div></div>
+        </div>
+        <div class="metric-card" id="windDirCard">
+          <div class="metric-label">Wind Direction</div>
+          <div id="windDirValue" style="display:flex;align-items:center;justify-content:center;padding-top:0.5rem;">
+            <div class="skeleton skeleton-value"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="wave-svg-wrap">
+      <svg class="wave1" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,40 C120,65 240,10 360,40 C480,70 600,15 720,40 C840,65 960,10 1080,40 C1200,70 1320,15 1440,40 L1440,80 L0,80 Z" fill="var(--teal)"/>
+      </svg>
+      <svg class="wave2" viewBox="0 0 1440 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,45 C160,20 320,60 480,35 C640,10 800,55 960,35 C1120,15 1280,55 1440,35 L1440,80 L0,80 Z" fill="var(--teal-light)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Afternoon Forecast -->
+  <section class="afternoon-section" id="afternoonSection" style="display:none;">
+    <h2 class="section-title">This Afternoon <span class="subtle">12 PM – 6 PM</span></h2>
+    <div class="afternoon-card" id="afternoonCard"></div>
+  </section>
+
+  <!-- 7-Day Forecast -->
+  <section class="forecast-section">
+    <h2 class="section-title">7-Day Marine Forecast</h2>
+    <div class="forecast-scroll" id="forecastScroll">
+      <!-- Cards injected by JS -->
+    </div>
+  </section>
+
+  <footer>
+    Data from the <a href="https://www.weather.gov" target="_blank" rel="noopener">National Weather Service</a> · Auto-refreshes every 10 min<br>
+    Sound Conditions is not a substitute for official marine forecasts. Always check NOAA before heading out.
+  </footer>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ─── Config ───
+  // Open-water point: wave height + marine wind data from raw gridpoint
+  const WATER_GRID = { id: 'LIX', x: 106, y: 103 };
+  // Coastal Gulfport point: 7-day forecast + hourly forecast (NWS only serves these for land grids)
+  const COAST_GRID = { id: 'LIX', x: 104, y: 108 };
+  const REFRESH_MS = 10 * 60 * 1000;
+  const UA = 'SoundConditions/1.0 (marine-weather-app)';
+
+  // ─── State ───
+  let lastFetchTime = null;
+
+  // ─── DOM refs ───
+  const app = document.getElementById('app');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const errorBanner = document.getElementById('errorBanner');
+  const safetyBanner = document.getElementById('safetyBanner');
+  const safetyText = document.getElementById('safetyText');
+  const waveCard = document.getElementById('waveCard');
+  const waveValue = document.getElementById('waveValue');
+  const windSpeedValue = document.getElementById('windSpeedValue');
+  const windDirValue = document.getElementById('windDirValue');
+  const afternoonSection = document.getElementById('afternoonSection');
+  const afternoonCard = document.getElementById('afternoonCard');
+  const forecastScroll = document.getElementById('forecastScroll');
+
+  // ─── Helpers ───
+  function degreesToCompass(deg) {
+    const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+    return dirs[Math.round(deg / 22.5) % 16];
+  }
+
+  function metersToFeet(m) { return m * 3.28084; }
+
+  function kmhToMph(k) { return k * 0.621371; }
+
+  function getSafetyLevel(waveFt, windMph) {
+    if (waveFt === null || waveFt === undefined) {
+      if (windMph > 20) return 'red';
+      if (windMph > 15) return 'yellow';
+      return 'green';
+    }
+    if (waveFt > 3 || windMph > 20) return 'red';
+    if (waveFt >= 2 || windMph >= 15) return 'yellow';
+    return 'green';
+  }
+
+  function getSafetyMessage(level) {
+    if (level === 'green') return 'Good day to go out';
+    if (level === 'yellow') return 'Use caution — moderate conditions';
+    return 'Stay ashore — rough conditions';
+  }
+
+  function setStatus(state, text) {
+    statusDot.className = 'status-dot' + (state === 'fetching' ? ' fetching' : state === 'error' ? ' error' : '');
+    statusText.textContent = text;
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.classList.add('visible');
+  }
+  function hideError() { errorBanner.classList.remove('visible'); }
+
+  async function fetchJSON(url) {
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': UA, 'Accept': 'application/geo+json' }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} from ${url}`);
+    return resp.json();
+  }
+
+  function windArrowSVG() {
+    return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L6 18h3v4h6v-4h3L12 2z"/></svg>`;
+  }
+
+  function renderWindDir(degrees, compass) {
+    const arrowDeg = degrees !== null ? degrees : 0;
+    windDirValue.innerHTML = degrees !== null
+      ? `<div class="wind-arrow-wrap">
+           <div class="wind-arrow" style="transform:rotate(${arrowDeg + 180}deg)">${windArrowSVG()}</div>
+           <span class="wind-dir-label">${compass}</span>
+         </div>`
+      : `<span class="metric-unavailable">—</span>`;
+  }
+
+  function extractCurrentValue(prop, now) {
+    if (!prop || !prop.values || prop.values.length === 0) return null;
+    for (const v of prop.values) {
+      const [start, dur] = v.validTime.split('/');
+      const startDate = new Date(start);
+      const hours = parseDuration(dur);
+      const endDate = new Date(startDate.getTime() + hours * 3600000);
+      if (now >= startDate && now < endDate) return { value: v.value, unit: prop.uom || '' };
+    }
+    let best = null;
+    for (const v of prop.values) {
+      const start = new Date(v.validTime.split('/')[0]);
+      if (start <= now) best = { value: v.value, unit: prop.uom || '' };
+    }
+    return best;
+  }
+
+  function extractRangeValues(prop, startTime, endTime) {
+    if (!prop || !prop.values) return [];
+    const vals = [];
+    for (const v of prop.values) {
+      const [s, dur] = v.validTime.split('/');
+      const vs = new Date(s);
+      const hours = parseDuration(dur);
+      const ve = new Date(vs.getTime() + hours * 3600000);
+      if (ve > startTime && vs < endTime && v.value !== null) {
+        vals.push(v.value);
+      }
+    }
+    return vals;
+  }
+
+  function parseDuration(iso) {
+    const m = iso.match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
+    if (!m) return 1;
+    return (parseInt(m[1]||0) * 24) + parseInt(m[2]||0) + (parseInt(m[3]||0) / 60);
+  }
+
+  function convertValue(raw, uom, targetUnit) {
+    if (raw === null || raw === undefined) return null;
+    const u = (uom || '').toLowerCase();
+    if (targetUnit === 'ft') {
+      if (u.includes('m') && !u.includes('mi')) return metersToFeet(raw);
+      return raw;
+    }
+    if (targetUnit === 'mph') {
+      if (u.includes('km')) return kmhToMph(raw);
+      if (u.includes('kt') || u.includes('knot')) return raw * 1.15078;
+      return raw;
+    }
+    return raw;
+  }
+
+  function formatNum(n, decimals) {
+    if (n === null || n === undefined) return '—';
+    return n.toFixed(decimals === undefined ? 1 : decimals);
+  }
+
+  function compassToDegrees(dir) {
+    const map = {N:0,NNE:22.5,NE:45,ENE:67.5,E:90,ESE:112.5,SE:135,SSE:157.5,S:180,SSW:202.5,SW:225,WSW:247.5,W:270,WNW:292.5,NW:315,NNW:337.5};
+    return map[dir] !== undefined ? map[dir] : null;
+  }
+
+  function gridURL(grid, path) {
+    return `https://api.weather.gov/gridpoints/${grid.id}/${grid.x},${grid.y}${path || ''}`;
+  }
+
+  // ─── Data Fetch ───
+  async function loadAll() {
+    setStatus('fetching', 'Updating…');
+    hideError();
+
+    try {
+      // Fetch from BOTH grid points in parallel:
+      // Water point: raw gridpoint data (waves, wind on water)
+      // Coast point: hourly forecast + 7-day forecast (NWS only serves these for land grids)
+      const [rawData, hourlyData, forecastData] = await Promise.all([
+        fetchJSON(gridURL(WATER_GRID)).catch(e => { console.warn('Raw grid failed:', e); return null; }),
+        fetchJSON(gridURL(COAST_GRID, '/forecast/hourly')).catch(e => { console.warn('Hourly failed:', e); return null; }),
+        fetchJSON(gridURL(COAST_GRID, '/forecast')).catch(e => { console.warn('7-day failed:', e); return null; })
+      ]);
+
+      const now = new Date();
+      lastFetchTime = now;
+
+      // ─── Current Conditions ───
+      let currentWaveFt = null;
+      let currentWindMph = null;
+      let currentWindDeg = null;
+      let waveAvailable = false;
+
+      // Raw gridpoint data (open water) for wave height and wind
+      if (rawData && rawData.properties) {
+        const rp = rawData.properties;
+
+        const wh = extractCurrentValue(rp.waveHeight, now);
+        if (wh && wh.value !== null) {
+          currentWaveFt = convertValue(wh.value, wh.unit, 'ft');
+          waveAvailable = true;
+        }
+
+        const ws = extractCurrentValue(rp.windSpeed, now);
+        if (ws && ws.value !== null) {
+          currentWindMph = convertValue(ws.value, ws.unit, 'mph');
+        }
+        const wd = extractCurrentValue(rp.windDirection, now);
+        if (wd && wd.value !== null) {
+          currentWindDeg = wd.value;
+        }
+      }
+
+      // Fallback: use coastal hourly forecast for wind if raw didn't have it
+      if (hourlyData && hourlyData.properties && hourlyData.properties.periods && hourlyData.properties.periods.length > 0) {
+        const hp = hourlyData.properties.periods[0];
+        if (currentWindMph === null) {
+          currentWindMph = parseFloat(hp.windSpeed) || 0;
+        }
+        if (currentWindDeg === null) {
+          currentWindDeg = compassToDegrees(hp.windDirection);
+        }
+      }
+
+      // Render current wave
+      if (waveAvailable && currentWaveFt !== null) {
+        const waveDisplay = currentWaveFt < 0.3 ? '<1' : formatNum(currentWaveFt, 1);
+        waveValue.innerHTML = `<span>${waveDisplay}</span><span class="metric-unit">ft</span>`;
+      } else {
+        waveValue.innerHTML = `<span class="metric-unavailable">Not currently reported for this area.<br>Use wind speed to gauge conditions.</span>`;
+      }
+
+      // Render current wind
+      windSpeedValue.innerHTML = currentWindMph !== null
+        ? `<span>${formatNum(currentWindMph, 0)}</span><span class="metric-unit">mph</span>`
+        : `<span class="metric-unavailable">—</span>`;
+
+      // Render wind direction
+      const compass = currentWindDeg !== null ? degreesToCompass(currentWindDeg) : null;
+      renderWindDir(currentWindDeg, compass);
+
+      // Safety
+      const safety = getSafetyLevel(waveAvailable ? currentWaveFt : null, currentWindMph || 0);
+      safetyBanner.className = 'safety-banner ' + safety;
+      safetyText.textContent = getSafetyMessage(safety);
+
+      // ─── Afternoon Forecast ───
+      renderAfternoon(rawData, hourlyData, now);
+
+      // ─── 7-Day Forecast ───
+      render7Day(rawData, forecastData, now);
+
+      updateStatusTime();
+      setStatus('ok', `Updated ${formatTimeAgo(lastFetchTime)}`);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setStatus('error', 'Update failed');
+      const ago = lastFetchTime ? ` Last data from ${formatTimeAgo(lastFetchTime)}.` : '';
+      showError(`Unable to reach the National Weather Service.${ago} Will retry automatically.`);
+    }
+  }
+
+  function renderAfternoon(rawData, hourlyData, now) {
+    const hour = now.getHours();
+    if (hour >= 13) { afternoonSection.style.display = 'none'; return; }
+
+    const noon = new Date(now); noon.setHours(12,0,0,0);
+    const six = new Date(now); six.setHours(18,0,0,0);
+
+    let aftWave = null, aftWind = null, aftDir = null;
+    let waveAvail = false;
+
+    if (rawData && rawData.properties) {
+      const rp = rawData.properties;
+      const wvs = extractRangeValues(rp.waveHeight, noon, six);
+      if (wvs.length > 0) {
+        const uom = rp.waveHeight.uom || '';
+        aftWave = convertValue(Math.max(...wvs), uom, 'ft');
+        waveAvail = true;
+      }
+      const wss = extractRangeValues(rp.windSpeed, noon, six);
+      if (wss.length > 0) {
+        const uom = rp.windSpeed.uom || '';
+        aftWind = convertValue(Math.max(...wss), uom, 'mph');
+      }
+      const wds = extractRangeValues(rp.windDirection, noon, six);
+      if (wds.length > 0) {
+        aftDir = degreesToCompass(wds[Math.floor(wds.length / 2)]);
+      }
+    }
+
+    // Fallback from coastal hourly periods
+    if (hourlyData && hourlyData.properties && hourlyData.properties.periods) {
+      const aftPeriods = hourlyData.properties.periods.filter(p => {
+        const t = new Date(p.startTime);
+        return t >= noon && t < six;
+      });
+      if (aftPeriods.length > 0) {
+        if (aftWind === null) {
+          const speeds = aftPeriods.map(p => parseFloat(p.windSpeed) || 0);
+          aftWind = Math.max(...speeds);
+        }
+        if (aftDir === null) {
+          aftDir = aftPeriods[Math.floor(aftPeriods.length / 2)].windDirection;
+        }
+      }
+    }
+
+    if (aftWind === null && !waveAvail) { afternoonSection.style.display = 'none'; return; }
+
+    let html = '';
+    if (waveAvail && aftWave !== null) {
+      html += `<div class="afternoon-metric"><div class="metric-label">Waves</div><div class="metric-value">${formatNum(aftWave,1)}<span class="metric-unit">ft</span></div></div>`;
+    } else {
+      html += `<div class="afternoon-metric"><div class="metric-label">Waves</div><div class="metric-unavailable">N/A</div></div>`;
+    }
+    html += `<div class="afternoon-metric"><div class="metric-label">Wind</div><div class="metric-value">${aftWind !== null ? formatNum(aftWind,0) : '—'}<span class="metric-unit">mph</span></div></div>`;
+    html += `<div class="afternoon-metric"><div class="metric-label">Direction</div><div class="metric-value" style="font-size:1.4rem;">${aftDir || '—'}</div></div>`;
+
+    afternoonCard.innerHTML = html;
+    afternoonSection.style.display = '';
+  }
+
+  function render7Day(rawData, forecastData, now) {
+    if (!forecastData || !forecastData.properties || !forecastData.properties.periods) {
+      forecastScroll.innerHTML = '<p style="color:var(--sand);font-size:0.85rem;">7-day forecast unavailable. NWS may be temporarily down.</p>';
+      return;
+    }
+
+    const periods = forecastData.properties.periods;
+    const days = [];
+    const seen = new Set();
+    for (const p of periods) {
+      const date = new Date(p.startTime);
+      const key = date.toISOString().slice(0,10);
+      if (seen.has(key) || !p.isDaytime) continue;
+      seen.add(key);
+
+      let dayWaveMin = null, dayWaveMax = null;
+      let dayWindMax = null, dayWindDir = null;
+      const dayStart = new Date(date); dayStart.setHours(6,0,0,0);
+      const dayEnd = new Date(date); dayEnd.setHours(20,0,0,0);
+
+      // Wave data from open-water raw grid
+      if (rawData && rawData.properties) {
+        const rp = rawData.properties;
+        const wvs = extractRangeValues(rp.waveHeight, dayStart, dayEnd);
+        if (wvs.length > 0) {
+          const uom = rp.waveHeight.uom || '';
+          dayWaveMin = convertValue(Math.min(...wvs), uom, 'ft');
+          dayWaveMax = convertValue(Math.max(...wvs), uom, 'ft');
+        }
+        const wss = extractRangeValues(rp.windSpeed, dayStart, dayEnd);
+        if (wss.length > 0) {
+          const uom = rp.windSpeed.uom || '';
+          dayWindMax = convertValue(Math.max(...wss), uom, 'mph');
+        }
+        const wds = extractRangeValues(rp.windDirection, dayStart, dayEnd);
+        if (wds.length > 0) {
+          dayWindDir = degreesToCompass(wds[Math.floor(wds.length / 2)]);
+        }
+      }
+
+      // Fallback wind from coastal forecast period text
+      if (dayWindMax === null) {
+        const m = (p.windSpeed || '').match(/(\d+)/);
+        if (m) dayWindMax = parseInt(m[1]);
+      }
+      if (dayWindDir === null) dayWindDir = p.windDirection || null;
+
+      const safety = getSafetyLevel(dayWaveMax, dayWindMax || 0);
+
+      days.push({
+        name: p.name,
+        date: date,
+        waveMin: dayWaveMin,
+        waveMax: dayWaveMax,
+        windMax: dayWindMax,
+        windDir: dayWindDir,
+        safety,
+        desc: p.detailedForecast || p.shortForecast || ''
+      });
+    }
+
+    if (days.length === 0) {
+      forecastScroll.innerHTML = '<p style="color:var(--sand);font-size:0.85rem;">No forecast data available.</p>';
+      return;
+    }
+
+    forecastScroll.innerHTML = days.map(d => {
+      const dateStr = d.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const waveStr = d.waveMax !== null
+        ? `${formatNum(d.waveMin,1)}–${formatNum(d.waveMax,1)} ft`
+        : 'N/A';
+      const windStr = d.windMax !== null ? `${formatNum(d.windMax,0)} mph` : '—';
+      const dirStr = d.windDir ? ` ${d.windDir}` : '';
+      const shortDesc = d.desc.length > 120 ? d.desc.slice(0, 117) + '…' : d.desc;
+
+      return `<div class="forecast-card">
+        <div class="fc-day"><span class="fc-safety ${d.safety}"></span>${d.name}</div>
+        <div class="fc-date">${dateStr}</div>
+        <div class="fc-metric"><span class="fc-metric-label">Waves</span><span class="fc-metric-value">${waveStr}</span></div>
+        <div class="fc-metric"><span class="fc-metric-label">Wind</span><span class="fc-metric-value">${windStr}${dirStr}</span></div>
+        <div class="fc-desc">${shortDesc}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function formatTimeAgo(date) {
+    const mins = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 min ago';
+    return `${mins} min ago`;
+  }
+
+  function updateStatusTime() {
+    if (!lastFetchTime) return;
+    setStatus('ok', `Updated ${formatTimeAgo(lastFetchTime)}`);
+  }
+
+  // ─── Init ───
+  async function init() {
+    app.classList.add('loaded');
+    await loadAll();
+    setInterval(loadAll, REFRESH_MS);
+    setInterval(updateStatusTime, 30000);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
